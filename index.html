@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RHG AI</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        #chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            max-height: 900px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        #controls button, #controls select {
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 0.9em;
+        }
+
+        #controls button:hover, #controls select:hover {
+            background-color: #004085;
+        }
+
+        #chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            opacity: 0; /* For fade-in */
+            animation: fadeIn 0.5s forwards;
+            word-wrap: break-word; /* Ensure long words don't overflow */
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .ai-message {
+            background-color: #e9ecef;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+        }
+
+        .ai-message .sender-name {
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        #input-area {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            background-color: #f8f9fa;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            resize: none; /* Disable manual resize, height adjusts with content */
+            font-size: 1em;
+            margin-right: 10px;
+            height: auto; /* Start with auto height */
+            min-height: 24px; /* Minimum height for one line */
+            max-height: 120px; /* Maximum height before scrolling within textarea */
+            overflow-y: auto; /* Scroll within textarea if content exceeds max-height */
+        }
+
+        #send-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+
+        #send-button:hover {
+            background-color: #218838;
+        }
+
+        /* Code Block Styling */
+        .code-block {
+            background-color: #2d2d2d; /* Dark background for code */
+            color: #f8f8f2; /* Light text color */
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto; /* Allow horizontal scrolling for long lines of code */
+            position: relative;
+        }
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap; /* Wrap long lines within the pre block */
+            word-wrap: break-word; /* Break words to prevent overflow */
+        }
+
+        .code-block .copy-button {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8em;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .code-block:hover .copy-button {
+            opacity: 1;
+        }
+
+        .copy-button:hover {
+            background-color: #777;
+        }
+
+        .copy-button.copied {
+            background-color: #28a745; /* Green when copied */
+            color: white;
+        }
+
+        /* Image styling */
+        .message img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        /* Typing indicator */
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #aaa;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1.0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <header>
+            <h1>RHG AI</h1>
+            <div id="controls">
+                <button id="new-chat-button">New Chat</button>
+                <button id="save-chat-button">Save Chat</button>
+                <select id="load-chat-select">
+                    <option value="">Load Chat...</option>
+                </select>
+            </div>
+        </header>
+        <div id="chat-box">
+            </div>
+        <div id="input-area">
+            <textarea id="user-input" placeholder="Ask RHG AI anything... (e.g., 'generate an image of a cat' or 'write python code for a web server')"></textarea>
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatBox = document.getElementById('chat-box');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+            const newChatButton = document.getElementById('new-chat-button');
+            const saveChatButton = document.getElementById('save-chat-button');
+            const loadChatSelect = document.getElementById('load-chat-select');
+
+            // --- CONFIGURATION ---
+            // IMPORTANT: REPLACE 'YOUR_GEMINI_API_KEY' with your actual Gemini API key.
+            // WARNING: For production, never expose your API key in client-side code.
+            //          This method is for local development/personal use only.
+            const GEMINI_API_KEY = 'AIzaSyAWBnQS5Hde0TSW83_He2mGCpTv5UQKEIE'; // <--- REPLACE THIS!
+            const GEMINI_API_URL_TEXT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${GEMINI_API_KEY}`;
+            // const GEMINI_API_URL_VISION = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`;
+            // Note: Above URLs are examples. Check official Gemini documentation for the correct model and endpoint.
+            //       'gemini-pro' is for text. Image generation often uses different models/APIs (e.g., Imagen).
+            //       The 'gemini-pro-vision' model is for providing images *to* the AI, not generating them from text.
+
+            const AI_NAME = "RHG AI";
+            let currentChat = []; // Stores { role: 'user'/'model', parts: [{ text: 'message' } or { image: 'url'}] }
+            let typingIndicatorTimeout;
+
+            // --- EVENT LISTENERS ---
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+            userInput.addEventListener('input', autoGrowTextarea);
+
+            newChatButton.addEventListener('click', startNewChat);
+            saveChatButton.addEventListener('click', saveCurrentChat);
+            loadChatSelect.addEventListener('change', (event) => loadSelectedChat(event.target.value));
+
+            // --- INITIALIZATION ---
+            loadChatHistoryList();
+            loadLatestChatIfExists();
+            displayInitialGreeting();
+
+            // --- CORE FUNCTIONS ---
+            function displayInitialGreeting() {
+                if (currentChat.length === 0) {
+                    addMessageToChatBox(AI_NAME, `Hello! I am ${AI_NAME}. How can I assist you today? You can ask me to write code, generate ideas, or try asking for an image description by saying something like "describe an image of a sunset". True image generation requires specific models/APIs.`, false, false);
+                }
+            }
+
+            async function sendMessage() {
+                const messageText = userInput.value.trim();
+                if (messageText === '') return;
+
+                addMessageToChatBox('You', messageText, true);
+                currentChat.push({ role: 'user', parts: [{ text: messageText }] });
+                userInput.value = '';
+                autoGrowTextarea();
+                showTypingIndicator();
+
+                try {
+                    let apiUrl = GEMINI_API_URL_TEXT;
+                    let requestPayload;
+
+                    // Construct the history for the API call
+                    const historyForAPI = currentChat.slice(0, -1).map(msg => ({
+                        role: msg.role,
+                        parts: msg.parts.map(part => ({ text: part.text })) // Assuming text parts for history
+                    }));
+
+                    requestPayload = {
+                        contents: [
+                            ...historyForAPI,
+                            {
+                                role: "user",
+                                parts: [{ text: messageText }]
+                            }
+                        ],
+                        generationConfig: {
+                            // "temperature": 0.7,
+                            // "maxOutputTokens": 1024,
+                        },
+                        systemInstruction: {
+                             role: "model", // or "system" depending on API
+                             parts: [{ text: `You are ${AI_NAME}, a helpful AI assistant. Respond clearly and concisely. When providing code, always enclose it in markdown-style triple backticks (\`\`\`language\ncode\n\`\`\`). If asked to generate an image, explain that you can describe images or discuss concepts for images, but direct image generation requires different tools or models. Your name is RHG AI.` }]
+                        }
+                    };
+
+                    // Handle potential image generation requests by informing the user of capabilities
+                    if (messageText.toLowerCase().includes("generate image") || messageText.toLowerCase().includes("create an image of")) {
+                        addMessageToChatBox(AI_NAME, "I can help you brainstorm ideas for images or describe them in detail! However, generating images directly is a specialized task that usually requires a different kind of AI model. For now, I can give you a rich text description of what you're imagining.", false);
+                        // currentChat.push({ role: 'model', parts: [{ text: "Understood you're asking for an image. I will describe it." }] });
+                        // For now, we'll let the main API call proceed, and the system prompt will guide the AI's response.
+                    }
+
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestPayload)
+                    });
+
+                    removeTypingIndicator();
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: { message: "Unknown API error." } }));
+                        console.error('API Error Response:', errorData);
+                        throw new Error(`API Error: ${response.status} ${response.statusText}. ${errorData.error?.message || ''}`);
+                    }
+
+                    const responseData = await response.json();
+
+                    let aiResponseText = "Sorry, I couldn't get a valid response.";
+                    if (responseData.candidates && responseData.candidates.length > 0 &&
+                        responseData.candidates[0].content && responseData.candidates[0].content.parts &&
+                        responseData.candidates[0].content.parts.length > 0) {
+                        
+                        aiResponseText = responseData.candidates[0].content.parts.map(part => part.text).join("\n");
+                        addMessageToChatBox(AI_NAME, aiResponseText, false);
+                        currentChat.push({ role: 'model', parts: [{ text: aiResponseText }] });
+
+                        // Conceptual: If the API *could* return an image URL directly in a part
+                        // responseData.candidates[0].content.parts.forEach(part => {
+                        //     if (part.text) {
+                        //         // Process text part
+                        //     } else if (part.inlineData && part.inlineData.mimeType.startsWith('image/')) {
+                        //         // Process inline image data (more complex)
+                        //     } else if (part.fileData && part.fileData.fileUri) {
+                        //         // Process image URI (if API supports this)
+                        //         // addImageToChatBox(AI_NAME, part.fileData.fileUri);
+                        //         // currentChat.push({ role: 'model', parts: [{ image: part.fileData.fileUri }] });
+                        //     }
+                        // });
+
+                    } else if (responseData.error) {
+                        aiResponseText = `Error from AI: ${responseData.error.message}`;
+                        addMessageToChatBox(AI_NAME, aiResponseText, false, true);
+                        currentChat.push({ role: 'model', parts: [{ text: aiResponseText }] });
+                    } else {
+                        addMessageToChatBox(AI_NAME, aiResponseText, false, true);
+                        currentChat.push({ role: 'model', parts: [{ text: aiResponseText }] });
+                    }
+
+                } catch (error) {
+                    removeTypingIndicator();
+                    console.error('Error sending message:', error);
+                    addMessageToChatBox(AI_NAME, `An error occurred: ${error.message}. Please check your API key, internet connection, and the browser console for details.`, false, true);
+                }
+            }
+
+            function addMessageToChatBox(sender, message, isUserMessage, isError = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(isUserMessage ? 'user-message' : 'ai-message');
+                if (isError) messageDiv.style.color = 'red';
+
+                if (!isUserMessage) {
+                    const senderNameDiv = document.createElement('div');
+                    senderNameDiv.classList.add('sender-name');
+                    senderNameDiv.textContent = sender;
+                    messageDiv.appendChild(senderNameDiv);
+                }
+                renderMessageContent(messageDiv, message); // Handles text and code blocks
+                chatBox.appendChild(messageDiv);
+                scrollToBottom();
+            }
+
+            function renderMessageContent(messageDiv, messageText) {
+                const parts = messageText.split(/(```[\s\S]*?```|`[^`]*?`)/g);
+                const fragment = document.createDocumentFragment();
+
+                parts.forEach(part => {
+                    if (!part) return; // Skip empty parts which can result from split
+
+                    if (part.startsWith('```') && part.endsWith('```')) {
+                        const codeBlockContainer = document.createElement('div');
+                        codeBlockContainer.classList.add('code-block');
+                        const pre = document.createElement('pre');
+                        const code = document.createElement('code');
+                        
+                        let lang = part.substring(3, part.indexOf('\n')).trim();
+                        let codeContent = part.substring(part.indexOf('\n') + 1, part.length - 3).trim();
+
+                        if (!codeContent && lang) { // Handles ```code``` (no newline after lang) or ```\ncode\n```
+                             if (part.substring(3).trim() === lang) { // case ```lang```
+                                codeContent = ""; // No actual code content, just language specified
+                             } else if (part.substring(3, part.length - 3).includes('\n')) {
+                                // This means lang was specified, and there is content after it
+                             } else {
+                                // Assumes ```code``` with no language specification
+                                codeContent = part.substring(3, part.length-3).trim();
+                                lang = '';
+                             }
+                        } else if (!lang && !codeContent) { // Handles ``` ``` or ```code```
+                            codeContent = part.substring(3, part.length-3).trim();
+                        }
+
+
+                        if (lang) code.classList.add(`language-${lang}`);
+                        code.textContent = codeContent;
+                        
+                        pre.appendChild(code);
+                        codeBlockContainer.appendChild(pre);
+
+                        const copyButton = document.createElement('button');
+                        copyButton.classList.add('copy-button');
+                        copyButton.textContent = 'Copy';
+                        copyButton.addEventListener('click', () => {
+                            navigator.clipboard.writeText(codeContent).then(() => {
+                                copyButton.textContent = 'Copied!';
+                                copyButton.classList.add('copied');
+                                setTimeout(() => {
+                                    copyButton.textContent = 'Copy';
+                                    copyButton.classList.remove('copied');
+                                }, 2000);
+                            }).catch(err => console.error('Failed to copy code: ', err));
+                        });
+                        codeBlockContainer.appendChild(copyButton);
+                        fragment.appendChild(codeBlockContainer);
+                    } else if (part.startsWith('`') && part.endsWith('`')) {
+                        const codeSpan = document.createElement('code');
+                        codeSpan.textContent = part.substring(1, part.length - 1);
+                        codeSpan.style.backgroundColor = '#f0f0f0';
+                        codeSpan.style.padding = '1px 5px';
+                        codeSpan.style.borderRadius = '3px';
+                        codeSpan.style.fontFamily = 'monospace';
+                        fragment.appendChild(codeSpan);
+                    } else {
+                        const textSpan = document.createElement('span');
+                        // Replace newline characters with <br> tags for multi-line text outside code blocks
+                        part.split('\n').forEach((line, index, arr) => {
+                            textSpan.appendChild(document.createTextNode(line));
+                            if (index < arr.length - 1) {
+                                textSpan.appendChild(document.createElement('br'));
+                            }
+                        });
+                        fragment.appendChild(textSpan);
+                    }
+                });
+                messageDiv.appendChild(fragment);
+            }
+            
+            // Placeholder for direct image display if API supports it
+            function addImageToChatBox(sender, imageUrl) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', 'ai-message');
+
+                const senderNameDiv = document.createElement('div');
+                senderNameDiv.classList.add('sender-name');
+                senderNameDiv.textContent = sender;
+                messageDiv.appendChild(senderNameDiv);
+
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = `${sender} generated image - (Image display is conceptual)`;
+                messageDiv.appendChild(img);
+
+                chatBox.appendChild(messageDiv);
+                scrollToBottom();
+            }
+
+
+            function showTypingIndicator() {
+                clearTimeout(typingIndicatorTimeout);
+                let typingDiv = chatBox.querySelector('.typing-indicator');
+                if (!typingDiv) {
+                    typingDiv = document.createElement('div');
+                    typingDiv.classList.add('message', 'ai-message', 'typing-indicator');
+                    typingDiv.innerHTML = `
+                        <div class="sender-name">${AI_NAME}</div>
+                        <span></span><span></span><span></span>
+                    `;
+                    chatBox.appendChild(typingDiv);
+                    scrollToBottom();
+                }
+                typingIndicatorTimeout = setTimeout(removeTypingIndicator, 20000); // Increased timeout
+            }
+
+            function removeTypingIndicator() {
+                clearTimeout(typingIndicatorTimeout);
+                const typingDiv = chatBox.querySelector('.typing-indicator');
+                if (typingDiv) {
+                    typingDiv.remove();
+                }
+            }
+
+            function scrollToBottom() {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            function autoGrowTextarea() {
+                userInput.style.height = 'auto';
+                userInput.style.height = (userInput.scrollHeight) + 'px';
+                if (userInput.scrollHeight > parseInt(getComputedStyle(userInput).maxHeight)) {
+                    userInput.style.overflowY = 'auto';
+                } else {
+                    userInput.style.overflowY = 'hidden';
+                }
+            }
+
+            function startNewChat() {
+                currentChat = [];
+                chatBox.innerHTML = '';
+                displayInitialGreeting();
+                localStorage.removeItem('rhg_ai_current_chat_name'); // Clear current chat name marker
+                userInput.value = ""; // Clear input field
+                autoGrowTextarea(); // Reset textarea height
+                console.log("New chat started.");
+            }
+
+            function saveCurrentChat() {
+                if (currentChat.length === 0) {
+                    alert("Chat is empty, nothing to save.");
+                    return;
+                }
+                const chatName = prompt("Enter a name for this chat:", `Chat ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`);
+                if (chatName) {
+                    localStorage.setItem(`rhg_ai_chat_${chatName}`, JSON.stringify(currentChat));
+                    localStorage.setItem('rhg_ai_current_chat_name', chatName);
+                    alert(`Chat "${chatName}" saved!`);
+                    loadChatHistoryList();
+                }
+            }
+
+            function loadChatHistoryList() {
+                loadChatSelect.innerHTML = '<option value="">Load Chat...</option>';
+                const currentChatName = localStorage.getItem('rhg_ai_current_chat_name');
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('rhg_ai_chat_')) {
+                        const chatName = key.substring('rhg_ai_chat_'.length);
+                        const option = document.createElement('option');
+                        option.value = chatName;
+                        option.textContent = chatName;
+                        if (chatName === currentChatName) {
+                            option.selected = true;
+                        }
+                        loadChatSelect.appendChild(option);
+                    }
+                }
+            }
+
+            function loadSelectedChat(chatName) {
+                if (!chatName) return;
+                const savedChat = localStorage.getItem(`rhg_ai_chat_${chatName}`);
+                if (savedChat) {
+                    currentChat = JSON.parse(savedChat);
+                    chatBox.innerHTML = '';
+                    currentChat.forEach(msg => {
+                         if (msg.role === 'user') {
+                            addMessageToChatBox('You', msg.parts[0].text, true);
+                        } else if (msg.role === 'model') {
+                            const messageContent = msg.parts.map(part => {
+                                if(part.text) return part.text;
+                                if(part.image) return `(Image: ${part.image})`; // Placeholder for image
+                                return '';
+                            }).join('\n');
+                            addMessageToChatBox(AI_NAME, messageContent, false);
+                            // If you had a separate addImageToChatBox, you'd check parts for image type
+                        }
+                    });
+                    localStorage.setItem('rhg_ai_current_chat_name', chatName);
+                    loadChatSelect.value = chatName;
+                    scrollToBottom();
+                } else {
+                    alert("Could not load chat.");
+                }
+            }
+
+            function loadLatestChatIfExists() {
+                const lastChatName = localStorage.getItem('rhg_ai_current_chat_name');
+                if (lastChatName) {
+                    loadSelectedChat(lastChatName);
+                }
+            }
+            
+            window.addEventListener('beforeunload', () => {
+                const currentChatName = localStorage.getItem('rhg_ai_current_chat_name');
+                if (currentChatName && currentChat.length > 0) {
+                     localStorage.setItem(`rhg_ai_chat_${currentChatName}`, JSON.stringify(currentChat));
+                } else if (currentChat.length > 0) {
+                    // Optional: auto-save to a default key if no chat is "loaded" but there's content
+                    // localStorage.setItem('rhg_ai_autosave_chat', JSON.stringify(currentChat));
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
